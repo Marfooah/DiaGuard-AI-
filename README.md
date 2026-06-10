@@ -10,11 +10,7 @@ The project combines machine learning, data preprocessing, explainable AI techni
 
 ## Demo
 
-```text
-
 https://diaguard.streamlit.app
-
-```
 
 ---
 
