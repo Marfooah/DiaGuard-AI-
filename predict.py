@@ -11,13 +11,22 @@ MODEL_CANDIDATES = [
     Path("models/diabetes_ann_model.keras"),
     Path("diabetes_ann_model.keras"),
 ]
-SKLEARN_MODEL_PATH = Path("models/diabetes_mlp_model.joblib")
+SKLEARN_MODEL_CANDIDATES = [
+    Path("models/diabetes_mlp_model.joblib"),
+    Path("diabetes_mlp_model.joblib"),
+]
 PREPROCESSING_CANDIDATES = [
     Path("models/diabetes_preprocessing.joblib"),
     Path("diabetes_preprocessing.joblib"),
 ]
-METRICS_PATH = Path("models/model_metrics.joblib")
-DATA_PATH = Path("data/diabetes.csv")
+METRICS_CANDIDATES = [
+    Path("models/model_metrics.joblib"),
+    Path("model_metrics.joblib"),
+]
+DATA_CANDIDATES = [
+    Path("data/diabetes.csv"),
+    Path("diabetes.csv"),
+]
 
 FEATURE_META = {
     "Pregnancies": {
@@ -149,7 +158,10 @@ def _first_existing(candidates: list[Path]) -> Path | None:
 
 
 def artifacts_exist() -> bool:
-    has_model = _first_existing(MODEL_CANDIDATES) is not None or SKLEARN_MODEL_PATH.exists()
+    has_model = (
+        _first_existing(MODEL_CANDIDATES) is not None
+        or _first_existing(SKLEARN_MODEL_CANDIDATES) is not None
+    )
     has_prep = _first_existing(PREPROCESSING_CANDIDATES) is not None
     return has_model and has_prep
 
@@ -157,12 +169,14 @@ def artifacts_exist() -> bool:
 def load_artifacts():
     prep_path = _first_existing(PREPROCESSING_CANDIDATES)
     preprocessing = joblib.load(prep_path)
-    metrics = joblib.load(METRICS_PATH) if METRICS_PATH.exists() else {}
+    metrics_path = _first_existing(METRICS_CANDIDATES)
+    metrics = joblib.load(metrics_path) if metrics_path else {}
     backend = preprocessing.get("backend", metrics.get("backend", "tensorflow"))
     model_path = _first_existing(MODEL_CANDIDATES)
+    sklearn_path = _first_existing(SKLEARN_MODEL_CANDIDATES)
 
-    if backend == "sklearn" or (model_path is None and SKLEARN_MODEL_PATH.exists()):
-        model = joblib.load(SKLEARN_MODEL_PATH)
+    if backend == "sklearn" or (model_path is None and sklearn_path):
+        model = joblib.load(sklearn_path)
         backend = "sklearn"
     else:
         from tensorflow.keras.models import load_model
@@ -175,9 +189,10 @@ def load_artifacts():
 
 @lru_cache(maxsize=1)
 def dataset_stats() -> dict:
-    if not DATA_PATH.exists():
+    data_path = _first_existing(DATA_CANDIDATES)
+    if not data_path:
         return {}
-    df = pd.read_csv(DATA_PATH)
+    df = pd.read_csv(data_path)
     zero_cols = ["Glucose", "BloodPressure", "SkinThickness", "Insulin", "BMI"]
     df[zero_cols] = df[zero_cols].replace(0, np.nan)
     stats = {}
@@ -311,7 +326,8 @@ def predict(values: dict, model=None, preprocessing=None, backend=None) -> dict:
     if model is None or preprocessing is None:
         model, preprocessing, metrics, backend = load_artifacts()
     else:
-        metrics = joblib.load(METRICS_PATH) if METRICS_PATH.exists() else {}
+        metrics_path = _first_existing(METRICS_CANDIDATES)
+        metrics = joblib.load(metrics_path) if metrics_path else {}
 
     scaled = preprocess_input(values, preprocessing)
     probability = _predict_probability(model, scaled, backend)
