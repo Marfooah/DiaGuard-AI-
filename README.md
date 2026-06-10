@@ -1,4 +1,4 @@
-<img width="2950" height="1620" alt="image" src="https://github.com/user-attachments/assets/85b26ec1-8c9e-45f7-85ad-ea9ff638b14e" /># DiaGuard AI
+# DiaGuard AI
 
 ### Intelligent Diabetes Risk Screening with Artificial Neural Networks
 
